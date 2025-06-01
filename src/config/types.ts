@@ -14,6 +14,7 @@ export interface SocialProviderConfig {
 	scope?: string[];
 	clientID?: string;
 	clientSecret?: string;
+	profileFields?: string[];
 	options?: Record<string, any>;
 	callbackURL?: string | { [env: string]: string };
 	roleRedirectURL?: string | { [env: string]: string };

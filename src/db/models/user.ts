@@ -1,4 +1,5 @@
 import mongoose, { Schema } from "mongoose";
+import { Profile } from "passport-github2";
 
 // Interface
 export interface AuthenticatedUser {
@@ -9,10 +10,11 @@ export interface AuthenticatedUser {
 	passwordHash: string;
 	_id?: mongoose.Types.ObjectId;
 	social?: {
-		google?: {
-			id: string;
-			displayName: string;
-		};
+		google?: Profile;
+		github?: Profile;
+		twitter?: Profile;
+		linkedin?: Profile;
+		facebook?: Profile;
 	};
 }
 

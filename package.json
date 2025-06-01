@@ -15,11 +15,7 @@
   },
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e",
   "dependencies": {
-    "@types/express-session": "^1.18.1",
-    "@types/jsonwebtoken": "^9.0.9",
-    "@types/passport-github2": "^1.2.9",
     "bcrypt": "^6.0.0",
-    "bcryptjs": "^3.0.2",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "express-session": "^1.18.1",
@@ -27,12 +23,18 @@
     "mongodb": "^6.16.0",
     "mongoose": "^8.15.1",
     "passport": "^0.7.0",
+    "passport-facebook": "^3.0.0",
     "passport-github2": "^0.1.12",
     "passport-google-oauth20": "^2.0.0"
   },
   "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
     "@types/express": "^5.0.2",
+    "@types/express-session": "^1.18.1",
+    "@types/jsonwebtoken": "^9.0.9",
     "@types/passport": "^1.0.17",
+    "@types/passport-facebook": "^3.0.3",
+    "@types/passport-github2": "^1.2.9",
     "@types/passport-google-oauth20": "^2.0.16"
   }
 }
