@@ -1,14 +1,15 @@
 {
 	"compilerOptions": {
 		"strict": true,
-		"outDir": "dist",
-		"target": "ES2020",
-		"module": "ESNext",
+		"target": "es2017",
+		"outDir": "./dist",
+		"rootDir": "./src",
+		"declaration": true,
+		"module": "commonjs",
 		"skipLibCheck": true,
 		"esModuleInterop": true,
-		"moduleResolution": "Node",
 		"forceConsistentCasingInFileNames": true
 	},
-	"include": ["src/**/*", "examples/**/*"],
-	"exclude": ["node_modules", "dist", "docs"]
+	"include": ["src/**/*"],
+	"exclude": ["node_modules", "dist", "examples", "docs"]
 }

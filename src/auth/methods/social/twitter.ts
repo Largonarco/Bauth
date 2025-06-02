@@ -1,46 +1,46 @@
 import passport from "passport";
 import JWTDelivery from "../../delivery/jwt";
 import { Request, Response, NextFunction } from "express";
-import { Strategy as FacebookStrategy, Profile } from "passport-facebook";
-
 import { InducedAuthConfig, SocialProviderConfig } from "../../../config/types";
+import { Strategy as TwitterStrategy } from "@superfaceai/passport-twitter-oauth2";
+import { ProfileWithMetaData } from "@superfaceai/passport-twitter-oauth2/dist/models/profile";
 
-class FacebookAuth {
+class TwitterAuth {
 	private initialized = false;
 	private inducedAuthConfig: InducedAuthConfig;
-	private facebookAuthConfig: SocialProviderConfig | undefined;
+	private twitterAuthConfig: SocialProviderConfig | undefined;
 
 	constructor(inducedAuthConfig: InducedAuthConfig) {
 		this.inducedAuthConfig = inducedAuthConfig;
-		this.facebookAuthConfig = inducedAuthConfig.auth.methods.social?.facebook;
+		this.twitterAuthConfig = inducedAuthConfig.auth.methods.social?.twitter;
 
 		// Early returns
 		if (this.initialized) return;
-		if (!this.facebookAuthConfig || !this.facebookAuthConfig.enabled) return;
+		if (!this.twitterAuthConfig || !this.twitterAuthConfig.enabled) return;
 
-		// Initialize passport strategy for Facebook
+		// Initialize passport strategy for Twitter OAuth 2.0
 		const callbackURL =
-			typeof this.facebookAuthConfig.callbackURL === "string"
-				? this.facebookAuthConfig.callbackURL
-				: this.facebookAuthConfig?.callbackURL?.[this.inducedAuthConfig.env || "development"];
+			typeof this.twitterAuthConfig.callbackURL === "string"
+				? this.twitterAuthConfig.callbackURL
+				: this.twitterAuthConfig?.callbackURL?.[this.inducedAuthConfig.env || "development"];
 		passport.use(
-			new FacebookStrategy(
+			new TwitterStrategy(
 				{
 					callbackURL: callbackURL!,
-					clientID: this.facebookAuthConfig.clientID!,
-					clientSecret: this.facebookAuthConfig.clientSecret!,
-					scope: this.facebookAuthConfig.scope || ["email", "public_profile"],
-					profileFields: this.facebookAuthConfig.profileFields || [
-						"id",
+					clientID: this.twitterAuthConfig.clientID!,
+					clientSecret: this.twitterAuthConfig.clientSecret!,
+					clientType: this.twitterAuthConfig.clientType as "confidential" | "public",
+					scope: this.twitterAuthConfig.scope || [
+						"tweet.read",
+						"users.read",
+						"offline.access",
 						"email",
-						"photos",
-						"displayName",
 					],
 				},
 				async (
 					accessToken: string,
 					refreshToken: string,
-					profile: Profile,
+					profile: ProfileWithMetaData,
 					done: (error: any, user?: any) => void
 				) => {
 					try {
@@ -59,34 +59,41 @@ class FacebookAuth {
 		this.initialized = true;
 	}
 
-	// Redirects to Facebook for authentication
+	// Redirects to Twitter for authentication
 	authRouteMiddleware = (req: Request, res: Response, next: NextFunction) => {
-		if (!this.facebookAuthConfig || !this.facebookAuthConfig.enabled)
-			return next({ status: 500, message: "Facebook auth not enabled" });
+		if (!this.twitterAuthConfig || !this.twitterAuthConfig.enabled)
+			return next({ status: 500, message: "Twitter auth not enabled" });
 
 		// Use passport.authenticate as middleware
-		return passport.authenticate("facebook", {
+		return passport.authenticate("twitter", {
 			session: true,
-			scope: this.facebookAuthConfig.scope || ["email", "public_profile"],
+			scope: this.twitterAuthConfig.scope || [
+				"tweet.read",
+				"users.read",
+				"offline.access",
+				"email",
+			],
 		})(req, res, next);
 	};
 
-	// Handles Facebook callback, does signUp or signIn
+	// Handles Twitter callback, does signUp or signIn
 	callbackRouteMiddleware = async (req: Request, res: Response, next: NextFunction) => {
-		if (!this.facebookAuthConfig || !this.facebookAuthConfig.enabled)
-			return next({ status: 500, message: "Facebook auth not enabled" });
+		if (!this.twitterAuthConfig || !this.twitterAuthConfig.enabled)
+			return next({ status: 500, message: "Twitter auth not enabled" });
 
 		// Use passport.authenticate to get profile
 		passport.authenticate(
-			"facebook",
+			"twitter",
 			{ session: true },
-			async (err: any, profile: Profile, info: any) => {
+			async (err: any, profile: ProfileWithMetaData, info: any) => {
 				if (err) return next(err);
-				if (!profile) return next({ status: 401, message: "Facebook authentication failed" });
+				if (!profile) return next({ status: 401, message: "Twitter authentication failed" });
 
 				try {
-					const email = profile.emails?.[0]?.value;
-					if (!email) return next({ status: 400, message: "No email from Facebook profile" });
+					// Twitter OAuth2 profile may not always have email unless scope is set and user grants it
+					// See: https://dev.to/superface/how-to-use-twitter-oauth-20-and-passportjs-for-user-login-33fk
+					const email = (profile.emails && profile.emails[0]?.value) || undefined;
+					if (!email) return next({ status: 400, message: "No email from Twitter profile" });
 
 					let roleRedirectURL: string | undefined;
 					let status: "registered" | "authenticated";
@@ -95,8 +102,8 @@ class FacebookAuth {
 
 					if (user) {
 						// Sign in
-						if (!user.social.facebook || Object.keys(user.social.facebook).length === 0) {
-							user.social.facebook = {
+						if (!user.social.twitter || Object.keys(user.social.twitter).length === 0) {
+							user.social.twitter = {
 								id: profile.id,
 								displayName: profile.displayName,
 							};
@@ -110,7 +117,7 @@ class FacebookAuth {
 							email,
 							role: "user",
 							social: {
-								facebook: {
+								twitter: {
 									id: profile.id,
 									displayName: profile.displayName,
 								},
@@ -120,10 +127,10 @@ class FacebookAuth {
 						status = "registered";
 
 						if (this.inducedAuthConfig.auth.rbac.enabled) {
-							if (!this.inducedAuthConfig.auth.methods.social?.facebook?.roleRedirectURL) {
+							if (!this.inducedAuthConfig.auth.methods.social?.twitter?.roleRedirectURL) {
 								return next({
 									status: 400,
-									message: "RBAC is enabled but roleRedirectURL is not set for Facebook auth",
+									message: "RBAC is enabled but roleRedirectURL is not set for Twitter auth",
 								});
 							}
 
@@ -132,10 +139,10 @@ class FacebookAuth {
 								id: user._id,
 							};
 							roleRedirectURL =
-								typeof this.inducedAuthConfig.auth.methods.social?.facebook?.roleRedirectURL ===
+								typeof this.inducedAuthConfig.auth.methods.social?.twitter?.roleRedirectURL ===
 								"string"
-									? this.inducedAuthConfig.auth.methods.social?.facebook?.roleRedirectURL
-									: this.inducedAuthConfig.auth.methods.social?.facebook?.roleRedirectURL?.[
+									? this.inducedAuthConfig.auth.methods.social?.twitter?.roleRedirectURL
+									: this.inducedAuthConfig.auth.methods.social?.twitter?.roleRedirectURL?.[
 											this.inducedAuthConfig.env || "development"
 									  ];
 						}
@@ -182,8 +189,8 @@ class FacebookAuth {
 		const { role } = req.body;
 		const { pendingUser } = req.session as any;
 
-		if (!this.facebookAuthConfig || !this.facebookAuthConfig.enabled)
-			return next({ status: 500, message: "Facebook auth not enabled" });
+		if (!this.twitterAuthConfig || !this.twitterAuthConfig.enabled)
+			return next({ status: 500, message: "Twitter auth not enabled" });
 		if (!this.inducedAuthConfig.auth.rbac.enabled)
 			return next({ status: 400, message: "RBAC is not enabled" });
 		if (!role) return next({ status: 400, message: "Role is required" });
@@ -220,4 +227,4 @@ class FacebookAuth {
 	};
 }
 
-export default FacebookAuth;
+export default TwitterAuth;

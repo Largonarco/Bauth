@@ -2,6 +2,7 @@ import passport from "passport";
 import JWTDelivery from "../../delivery/jwt";
 import { Request, Response, NextFunction } from "express";
 import { InducedAuthConfig, SocialProviderConfig } from "../../../config/types";
+
 import { Strategy as GoogleStrategy, Profile, VerifyCallback } from "passport-google-oauth20";
 
 class GoogleAuth {

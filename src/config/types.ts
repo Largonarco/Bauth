@@ -13,6 +13,7 @@ export interface SocialProviderConfig {
 	enabled: boolean;
 	scope?: string[];
 	clientID?: string;
+	clientType?: string;
 	clientSecret?: string;
 	profileFields?: string[];
 	options?: Record<string, any>;

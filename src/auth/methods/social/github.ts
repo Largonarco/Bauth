@@ -2,6 +2,7 @@ import passport from "passport";
 import JWTDelivery from "../../delivery/jwt";
 import { Request, Response, NextFunction } from "express";
 import { Strategy as GithubStrategy, Profile } from "passport-github2";
+
 import { InducedAuthConfig, SocialProviderConfig } from "../../../config/types";
 
 class GithubAuth {
