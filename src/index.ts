@@ -1,83 +1,73 @@
-import type mongoose from "mongoose";
-import { Database } from "./db/index";
-import BasicAuth from "./auth/methods/basic";
-import { InducedAuthConfig } from "./config/types";
-import type { Application, NextFunction, Request, Response } from "express";
-import { AuthenticatedUser, AuthenticatedUserSchema } from "./db/models/user";
-import session from "express-session";
+import AuthAPI from "./api";
 
-class InducedAuth {
-	public config: InducedAuthConfig;
-	public mongooseConnection: mongoose.Connection | undefined;
+import { AuthConfig } from "./config/types";
+import AuthKit from "./auth/methods/authkit";
+import Password from "./auth/methods/standard/password";
+import OAuth from "./auth/methods/standard/oauth";
+import Standard from "./auth/methods/standard";
 
-	constructor(config: InducedAuthConfig) {
+class Auth {
+	public authAPI: AuthAPI;
+	public config: AuthConfig;
+
+	constructor(config: AuthConfig) {
+		if (!config.projectName) throw new Error("Project name is required");
+
+		const authAPI = new AuthAPI(config.apikey);
+
 		this.config = config;
+		this.authAPI = authAPI;
 
-		// Validation
-		const app = config.expressApp as Application;
-		if (!app) {
-			throw new Error("Express app instance must be provided in config.expressApp");
+		this.init();
+	}
+
+	public async init() {
+		const projects = await this.authAPI.project().getAll(1, 1, { name: this.config.projectName });
+		if (projects.success && projects.data.projects.length === 0) {
+			throw new Error("No such Project found. First create a project using the CLI.");
 		}
 
-		// Attaching config and models to app.locals
-		(app as Application).locals.inducedAuthConfig = config;
-		(app as Application).locals.AuthenticatedUser =
-			config.database.userModel.discriminator<AuthenticatedUser>(
-				"AuthenticatedUser",
-				AuthenticatedUserSchema
-			);
+		const project = projects.data.projects[0];
 
-		// Session setup
-		app.use(
-			session({
-				resave: false,
-				saveUninitialized: false,
-				secret: config.sessionOptions.secret,
-				cookie: {
-					secure: true,
-					httpOnly: true,
-					sameSite: config.env === "production" ? "strict" : "lax",
-					maxAge: config.sessionOptions.cookie?.maxAge || 86400000,
-				},
-			})
-		);
-
-		// Setup Mongoose connection
-		if (!config.database.mongooseConnection) {
-			if (!config.database.mongoUrl) {
+		if (project.workos_config) {
+			const workosConfig = await this.authAPI.workosConfig().get(project.workos_config);
+			if (!workosConfig.success) {
 				throw new Error(
-					"MongoDB connection string (mongoUrl) must be provided in config.database.mongoUrl"
+					"No WorkOS Config found. First create a WorkOS Config and link it to the project using the CLI."
 				);
 			}
 
-			// New Mongoose connection
-			const db = new Database(config.database);
-			(app as Application).locals.mongooseConnection = db.connection;
-		} else {
-			// Existing Mongoose connection
-			(app as Application).locals.mongooseConnection = config.database.mongooseConnection;
+			this.config.workos.rbac = workosConfig.data.workosConfig.rbac;
+			this.config.workos.authkit = workosConfig.data.workosConfig.authkit;
+			this.config.workos.clientId = workosConfig.data.workosConfig.workos_client_id;
+			this.config.workos.signupEnabled = workosConfig.data.workosConfig.signup_enabled;
+			this.config.workos.clientSecret = workosConfig.data.workosConfig.workos_client_secret;
+			this.config.workos.useDefaultWorkosConfig = workosConfig.data.workosConfig.is_default;
+			this.config.workos.allowed_social_providers =
+				workosConfig.data.workosConfig.allowed_social_providers;
+			this.config.workos.enabled_auth_methods = workosConfig.data.workosConfig.enabled_auth_methods;
 		}
 	}
 
-	public basicAuth() {
-		const basicAuth = new BasicAuth(this.config);
-		return {
-			signUp: (req: Request, res: Response, next: NextFunction) =>
-				basicAuth.signUpRouteMiddleware(req, res, next),
-			signIn: (req: Request, res: Response, next: NextFunction) =>
-				basicAuth.signInRouteMiddleware(req, res, next),
-			secure: (req: Request, res: Response, next: NextFunction) =>
-				basicAuth.secureRouteMiddleware(req, res, next),
-			signOut: (req: Request, res: Response, next: NextFunction) =>
-				basicAuth.signOutRouteMiddleware(req, res, next),
-			resetPassword: (req: Request, res: Response, next: NextFunction) =>
-				basicAuth.resetPasswordRouteMiddleware(req, res, next),
-		};
+	public async authkit() {
+		if (!this.config.workos.authkit.enabled) {
+			throw new Error("AuthKit is not enabled for this project. Use standard() method.");
+		}
+
+		const authkit = new AuthKit(this.config, this.authAPI);
+
+		return authkit;
 	}
 
-	public socialAuth() {
-		return {};
+	public async standard() {
+		if (this.config.workos.authkit.enabled) {
+			throw new Error("AuthKit is enabled for this project. Use authkit() method instead.");
+		}
+
+		const standard = new Standard(this.config, this.authAPI);
+
+		return standard;
 	}
 }
 
-export default InducedAuth;
+export default Auth;

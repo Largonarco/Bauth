@@ -5,7 +5,8 @@
 		"outDir": "./dist",
 		"rootDir": "./src",
 		"declaration": true,
-		"module": "commonjs",
+		"module": "ESNext",
+		"moduleResolution": "node",
 		"skipLibCheck": true,
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true

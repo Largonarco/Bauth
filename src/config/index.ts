@@ -1,57 +1,46 @@
-// src/config/index.ts
-
 import express from "express";
-import { Model } from "mongoose";
+import { AuthConfig, AuthMethod } from "./types";
 
-import { InducedAuthConfig } from "./types";
-
-const config: InducedAuthConfig = {
-	expressApp: express(),
-	env: process.env.NODE_ENV as "development" | "staging" | "production",
-	database: {
-		userModel: Model,
-		mongoUrl: process.env.MONGO_URL,
-	},
-	sessionOptions: {
-		secret: process.env.SESSION_SECRET!,
-		cookie: {
-			httpOnly: true,
-			sameSite: "lax",
-		},
-	},
-	indexes: [
-		{ fields: ["roles"] },
-		{ fields: ["apiKeys"] },
-		{ fields: ["social.google.id"] },
-		{ fields: ["email"], options: { unique: true } },
-	],
-	auth: {
+const config: AuthConfig = {
+	projectName: "Chargeflow",
+	apikey: process.env.API_KEY!,
+	workos: {
+		signupEnabled: false,
+		useDefaultWorkosConfig: true,
+		env: process.env.NODE_ENV as "staging" | "production",
+		enabled_auth_methods: [AuthMethod.SSO, AuthMethod.EMAIL_PASSWORD],
 		rbac: {
 			enabled: true,
-			roles: ["user", "admin", "superadmin"],
+			roles: [],
 		},
-		methods: {
-			email: {
-				enabled: true,
-				emailVerification: true,
+		clientId: {
+			staging: process.env.WORKOS_STAGING_CLIENTID!,
+			production: process.env.WORKOS_PROD_CLIENTID!,
+		},
+		clientSecret: {
+			staging: process.env.WORKOS_STAGING_CLIENT_SECRET!,
+			production: process.env.WORKOS_PROD_CLIENT_SECRET!,
+		},
+		authkit: {
+			enabled: true,
+			logoutURL: {
+				staging: "http://localhost:3000/auth/logout",
+				production: "https://chargeflow.com/auth/logout",
 			},
-			social: {
-				google: {
-					enabled: true,
-					scope: ["profile", "email"],
-					clientID: process.env.GOOGLE_CLIENT_ID!,
-					clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-					callbackURL: {
-						production: "https://myapp.com/auth/google/callback",
-						development: "http://localhost:3000/auth/google/callback",
-					},
-					routes: {
-						loginPath: "/auth/google",
-						callbackPath: "/auth/google/callback",
-					},
+			redirectURL: {
+				staging: "http://localhost:3000/auth/callback",
+				production: "https://chargeflow.com/auth/callback",
+			},
+		},
+		allowed_social_providers: [
+			{
+				provider: "google",
+				redirectURL: {
+					staging: "https://chargeflow.com/auth/google/callback",
+					production: "https://chargeflow.com/auth/google/callback",
 				},
 			},
-		},
+		],
 		delivery: {
 			apiKey: {
 				enabled: false,
@@ -61,7 +50,6 @@ const config: InducedAuthConfig = {
 				expiresIn: 86400,
 				sendVia: ["cookie"],
 				secret: process.env.JWT_SECRET!,
-				refresh: { enabled: true, expiresIn: 604800 },
 				cookieOptions: {
 					httpOnly: true,
 					sameSite: "lax",

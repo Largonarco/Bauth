@@ -1,31 +1,26 @@
-import type { Application } from "express";
-import type { Connection, Model } from "mongoose";
-
-export type AuthProvider = "google" | "facebook" | "github" | "microsoft" | string; // for custom providers
-
-// Methods
-export interface EmailAuthConfig {
-	enabled: boolean;
-	emailVerification?: boolean;
+// Auth Methods Enum
+export enum AuthMethod {
+	SSO = "sso",
+	MFA = "mfa",
+	SOCIAL = "social",
+	MAGIC_LINK = "magic_link",
+	EMAIL_PASSWORD = "email_password",
 }
 
-export interface SocialProviderConfig {
+// Social Provider Config
+export type SocialProvider = {
+	provider: string;
+	redirectURL: { staging: string; production?: string };
+};
+
+// AuthKit Config
+export interface AuthKitConfig {
 	enabled: boolean;
-	scope?: string[];
-	clientID?: string;
-	clientType?: string;
-	clientSecret?: string;
-	profileFields?: string[];
-	options?: Record<string, any>;
-	callbackURL?: string | { [env: string]: string };
-	roleRedirectURL?: string | { [env: string]: string };
-	routes?: {
-		loginPath?: string;
-		callbackPath?: string;
-	};
+	logoutURL: { staging: string; production?: string };
+	redirectURL: { staging: string; production?: string };
 }
 
-// Delivery
+// Delivery Configs
 export interface ApiKeyDeliveryConfig {
 	enabled: boolean;
 	headerName?: string;
@@ -37,10 +32,6 @@ export interface JWTDeliveryConfig {
 	enabled: boolean;
 	expiresIn?: number;
 	sendVia?: ("cookie" | "header")[];
-	refresh?: {
-		enabled: boolean;
-		expiresIn: number;
-	};
 	cookieOptions?: {
 		name?: string;
 		path?: string;
@@ -51,51 +42,32 @@ export interface JWTDeliveryConfig {
 	};
 }
 
-// RBAC
+// RBAC Config
 export interface RBACConfig {
 	enabled: boolean;
-	roles?: string[];
-}
-
-// Database [MongoDB]
-export interface DatabaseConfig {
-	mongoUrl?: string;
-	userModel: Model<any>;
-	collectionName?: string;
-	mongooseConnection?: Connection;
-}
-
-export interface IndexConfig {
-	fields: string[];
-	options?: Record<string, any>;
+	roles?: {
+		name: string;
+		permissions: string[];
+	}[];
 }
 
 // Main Config
-export interface InducedAuthConfig {
-	indexes?: IndexConfig[];
-	expressApp: Application;
-	database: DatabaseConfig;
-	env: "development" | "staging" | "production";
-	sessionOptions: {
-		secret: string;
-		cookie?: {
-			maxAge?: number;
-			secure?: boolean;
-			httpOnly?: boolean;
-			sameSite?: "lax" | "strict" | "none";
-		};
-	};
-	auth: {
+export interface AuthConfig {
+	apikey: string;
+	projectName: string;
+	workos: {
 		rbac: RBACConfig;
+		signupEnabled: boolean;
+		authkit: AuthKitConfig;
+		env: "staging" | "production";
+		useDefaultWorkosConfig: boolean;
+		enabled_auth_methods: AuthMethod[];
+		allowed_social_providers: SocialProvider[];
+		clientId: { staging: string; production?: string };
+		clientSecret: { staging: string; production?: string };
 		delivery: {
 			jwt: JWTDeliveryConfig;
 			apiKey: ApiKeyDeliveryConfig;
-		};
-		methods: {
-			email: EmailAuthConfig;
-			social?: {
-				[provider in AuthProvider]?: SocialProviderConfig;
-			};
 		};
 	};
 }

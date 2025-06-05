@@ -3,20 +3,32 @@
 	"license": "ISC",
 	"version": "1.0.0",
 	"author": "Omkar N",
-	"name": "induced_auth",
+	"name": "@embos/auth",
 	"main": "dist/index.js",
+	"bin": {
+		"auth-cli": "./dist/cli.js"
+	},
 	"description": "Authentication Package for Induced",
 	"directories": {
 		"doc": "docs",
 		"example": "examples"
 	},
 	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1"
+		"build": "tsc",
+		"cli": "node dist/cli.js"
 	},
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
 	"packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e",
 	"dependencies": {
 		"@superfaceai/passport-twitter-oauth2": "^1.2.4",
+		"@types/commander": "^2.12.5",
+		"@workos-inc/node": "^7.53.0",
 		"bcrypt": "^6.0.0",
+		"commander": "^14.0.0",
 		"dotenv": "^16.5.0",
 		"express": "^5.1.0",
 		"express-session": "^1.18.1",

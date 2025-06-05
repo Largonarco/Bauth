@@ -48,25 +48,6 @@ class JWTDelivery {
 		return { isValid: true, decoded };
 	}
 
-	// Refresh JWT
-	async refreshToken(token: string, res: Response) {
-		const decoded = await verifyJWT(token, this.config.secret!);
-		if (!decoded) {
-			throw new Error("Invalid token");
-		}
-
-		const newToken = await signJWT(decoded as object, this.config.secret!, {
-			expiresIn: this.config.refresh?.expiresIn,
-		});
-		res.cookie(
-			this.config.cookieOptions?.name || "auth_token",
-			newToken,
-			this.config.cookieOptions || {}
-		);
-
-		return { token: newToken, res };
-	}
-
 	// Revoke token by clearing cookie
 	revokeToken(res: Response) {
 		res.clearCookie(
